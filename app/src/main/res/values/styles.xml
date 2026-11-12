@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.HeartRate" parent="Theme.MaterialComponents.Light.NoActionBar" />
+</resources>
