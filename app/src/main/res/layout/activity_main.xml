@@ -5,7 +5,7 @@
     android:background="@color/bg_main"
     android:orientation="vertical">
 
-    <!-- نوار بالا: فلش بازگشت + عنوان + منوی سه‌نقطه -->
+    <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="64dp"
@@ -52,7 +52,7 @@
         android:clipToPadding="false"
         android:paddingBottom="12dp" />
 
-    <!-- دکمه‌ی اندازه‌گیری پایین صفحه -->
+    <!-- Measure button -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

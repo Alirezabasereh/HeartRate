@@ -5,7 +5,7 @@
     android:background="@color/bg_measure"
     android:orientation="vertical">
 
-    <!-- نوار بالا: فلش مرجانی + عنوان -->
+    <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
@@ -38,7 +38,7 @@
         android:layout_height="1dp"
         android:background="@color/divider_measure" />
 
-    <!-- بخش اصلی: قلب، عنوان، موج -->
+    <!-- Heart, title, wave -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -84,7 +84,7 @@
             android:layout_marginTop="36dp" />
     </LinearLayout>
 
-    <!-- پنل خاکستری پایین: Did you know? -->
+    <!-- Bottom gray panel -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -19,7 +19,9 @@ sealed class HistoryItem {
     object Empty : HistoryItem()
 }
 
-class HistoryAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class HistoryAdapter(
+    private val onRecordClick: (HeartRecord) -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
         private const val TYPE_SUMMARY = 0
@@ -35,8 +37,8 @@ class HistoryAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var items: List<HistoryItem> = listOf(HistoryItem.Summary(null), HistoryItem.Empty)
 
-    private val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT)
-    private val dateTimeFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+    private val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT, Locale.US)
+    private val dateTimeFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.US)
 
     class SummaryHolder(v: View) : RecyclerView.ViewHolder(v) {
         val bpmText: TextView = v.findViewById(R.id.lastBpmText)
@@ -88,6 +90,8 @@ class HistoryAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                     holder.dateText.setText(R.string.no_measurement_yet)
                     holder.zoneText.text = ""
                     holder.rangeBar.setBpm(0)
+                    holder.itemView.setOnClickListener(null)
+                    holder.itemView.isClickable = false
                 } else {
                     val zone = HeartZone.of(latest.bpm)
                     holder.bpmText.text = "${latest.bpm}"
@@ -97,6 +101,7 @@ class HistoryAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                     holder.zoneText.setText(zone.labelRes)
                     holder.zoneText.setTextColor(ContextCompat.getColor(ctx, zone.colorRes))
                     holder.rangeBar.setBpm(latest.bpm)
+                    holder.itemView.setOnClickListener { onRecordClick(latest) }
                 }
             }
 
@@ -111,8 +116,9 @@ class HistoryAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 holder.zoneText.setText(zone.labelRes)
                 holder.zoneText.setTextColor(ContextCompat.getColor(ctx, zone.colorRes))
                 holder.rangeBar.setBpm(item.record.bpm)
+                holder.itemView.setOnClickListener { onRecordClick(item.record) }
 
-                // گوشه‌های کارت گروه: بالا / وسط / پایین / تکی
+                // Card corners for the group: top / middle / bottom / single
                 val bg = when (item.shape) {
                     SHAPE_TOP -> R.drawable.bg_card_top
                     SHAPE_MIDDLE -> R.drawable.bg_card_middle
@@ -142,7 +148,7 @@ class HistoryAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         }
 
         val dayKeyFormat = SimpleDateFormat("yyyyMMdd", Locale.US)
-        val titleFormat = DateFormat.getDateInstance(DateFormat.LONG)
+        val titleFormat = DateFormat.getDateInstance(DateFormat.LONG, Locale.US)
 
         var i = 0
         while (i < records.size) {

@@ -2,18 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.heartrate">
 
-    <!-- مجوز لازم برای خواندن سنسورهای بدنی مثل ضربان قلب -->
+    <!-- Permission required to read body sensors such as heart rate -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
 
-    <!-- اعلام این‌که اپ از سنسور ضربان قلب استفاده می‌کند (اختیاری اما توصیه‌شده) -->
+    <!-- Declares heart-rate sensor usage; not required so the app can still be installed/tested anywhere -->
     <uses-feature
         android:name="android.hardware.sensor.heartrate"
-        android:required="true" />
+        android:required="false" />
 
     <application
         android:allowBackup="true"
-        android:supportsRtl="true"
-        android:label="پایشگر ضربان قلب"
+        android:label="@string/app_name"
         android:theme="@style/Theme.HeartRate">
 
         <activity
@@ -24,6 +23,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".RecordDetailActivity"
+            android:exported="false" />
 
         <activity
             android:name=".MeasurementActivity"

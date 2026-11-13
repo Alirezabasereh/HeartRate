@@ -12,9 +12,9 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * موج خاکستریِ صاف و در حال حرکت به چپ، شبیه صفحه‌ی Measuring در Samsung Health.
- * سنسور فقط عدد BPM می‌دهد، پس شکل موج ساختگی (مدل ساده‌ی نبض) است و
- * سرعت ضرب‌های آن با BPM واقعی هماهنگ می‌شود.
+ * Smooth gray wave scrolling left, like the Samsung Health measuring screen.
+ * The sensor only reports a BPM number, so the waveform is synthetic (simple pulse
+ * model); its beat rate follows the real BPM.
  */
 class PpgWaveView @JvmOverloads constructor(
     context: Context,

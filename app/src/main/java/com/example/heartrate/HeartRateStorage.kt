@@ -34,6 +34,21 @@ object HeartRateStorage {
             .apply()
     }
 
+    fun deleteRecord(context: Context, timestamp: Long) {
+        val remaining = getRecords(context).filter { it.timestamp != timestamp }
+        val arr = JSONArray()
+        for (r in remaining) {
+            val obj = JSONObject()
+            obj.put("bpm", r.bpm)
+            obj.put("timestamp", r.timestamp)
+            arr.put(obj)
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_RECORDS, arr.toString())
+            .apply()
+    }
+
     fun getRecords(context: Context): List<HeartRecord> {
         val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_RECORDS, null) ?: return emptyList()

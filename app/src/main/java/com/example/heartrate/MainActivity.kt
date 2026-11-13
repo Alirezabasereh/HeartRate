@@ -19,7 +19,9 @@ class MainActivity : AppCompatActivity() {
 
         val recyclerView: RecyclerView = findViewById(R.id.historyRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = HistoryAdapter()
+        adapter = HistoryAdapter { record ->
+            startActivity(RecordDetailActivity.intent(this, record))
+        }
         recyclerView.adapter = adapter
 
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
