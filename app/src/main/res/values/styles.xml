@@ -1,0 +1,18 @@
+<resources>
+    <!-- صفحه‌ی اصلی: پس‌زمینه‌ی خاکستری روشن مثل Samsung Health -->
+    <style name="Theme.HeartRate" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/coral</item>
+        <item name="colorPrimaryVariant">@color/coral_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/coral</item>
+        <item name="android:windowBackground">@color/bg_main</item>
+        <item name="android:statusBarColor">@color/bg_main</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- صفحه‌ی Measuring: زمینه‌ی تقریباً سفید -->
+    <style name="Theme.HeartRate.Measure">
+        <item name="android:windowBackground">@color/bg_measure</item>
+        <item name="android:statusBarColor">@color/bg_measure</item>
+    </style>
+</resources>
