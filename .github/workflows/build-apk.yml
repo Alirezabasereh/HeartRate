@@ -9,9 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,21 +19,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Android SDK command-line tools
+      - name: Install required Android SDK packages
         run: |
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          cd "$ANDROID_SDK_ROOT/cmdline-tools"
-          curl -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q cmdline-tools.zip
-          mv cmdline-tools latest
-          rm cmdline-tools.zip
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-
-      - name: Accept licenses and install required SDK packages
-        run: |
-          yes | sdkmanager --licenses --sdk_root="$ANDROID_SDK_ROOT" || true
-          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -45,8 +31,6 @@ jobs:
 
       - name: Build debug APK
         run: gradle assembleDebug
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
