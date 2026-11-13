@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "دقت: بالا"
             SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "دقت: متوسط"
             SensorManager.SENSOR_STATUS_ACCURACY_LOW -> "دقت: پایین"
-            SensorManager.SENSOR_STATUS_ACCURACY_UNRELIABLE -> "دقت: نامعتبر (انگشت را ثابت کنید)"
+            SensorManager.SENSOR_STATUS_UNRELIABLE -> "دقت: نامعتبر (انگشت را ثابت کنید)"
             else -> "دقت: نامشخص"
         }
     }
