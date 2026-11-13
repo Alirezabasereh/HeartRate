@@ -14,4 +14,16 @@
     <color name="status_alert">#F0662A</color>
     <color name="range_track">#E4E4E4</color>
     <color name="range_marker">#2B2B2B</color>
+    <color name="step_green">#12B866</color>
+    <color name="step_green_card">#09A04A</color>
+    <color name="step_green_light">#D6F3E2</color>
+    <color name="step_green_text">#0B9C4B</color>
+    <color name="step_dash">#BFE3CE</color>
+    <color name="ring_blue">#3D9BE9</color>
+    <color name="ring_pink">#F0508F</color>
+    <color name="icon_gray">#8E8E93</color>
+    <color name="bar_gray">#CFCFCF</color>
+    <color name="sunday_red">#E5484D</color>
+    <color name="badge_orange">#F5A524</color>
+    <color name="badge_orange_light">#FFD27A</color>
 </resources>
