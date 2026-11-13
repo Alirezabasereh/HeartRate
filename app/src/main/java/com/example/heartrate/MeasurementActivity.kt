@@ -18,6 +18,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlin.math.abs
 
 class MeasurementActivity : AppCompatActivity(), SensorEventListener {
 
@@ -25,14 +26,16 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     private var heartRateSensor: Sensor? = null
 
     private lateinit var heartIcon: ImageView
-    private lateinit var bpmText: TextView
-    private lateinit var countdownText: TextView
-    private lateinit var statusText: TextView
-    private lateinit var ecgView: EcgView
+    private lateinit var titleText: TextView
+    private lateinit var subtitleText: TextView
+    private lateinit var waveView: PpgWaveView
 
     private var pulseAnimator: ObjectAnimator? = null
+    private var pulseBpm = 0
     private var countDownTimer: CountDownTimer? = null
+    private val handler = Handler(Looper.getMainLooper())
     private val readings = mutableListOf<Int>()
+    private var gotFirstReading = false
     private var measurementFinished = false
 
     companion object {
@@ -45,22 +48,21 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         setContentView(R.layout.activity_measurement)
 
         heartIcon = findViewById(R.id.heartIcon)
-        bpmText = findViewById(R.id.bpmText)
-        countdownText = findViewById(R.id.countdownText)
-        statusText = findViewById(R.id.statusText)
-        ecgView = findViewById(R.id.ecgView)
+        titleText = findViewById(R.id.titleText)
+        subtitleText = findViewById(R.id.subtitleText)
+        waveView = findViewById(R.id.waveView)
 
-        findViewById<View>(R.id.cancelButton).setOnClickListener { finish() }
+        findViewById<View>(R.id.backButton).setOnClickListener { finish() }
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
 
-        ecgView.start()
+        waveView.setSignalActive(false)
+        waveView.start()
         startPulseAnimation(800L)
 
         if (heartRateSensor == null) {
-            statusText.text = "سنسور ضربان قلب روی این دستگاه پیدا نشد."
-            countdownText.text = "ناموفق"
+            showFailure(R.string.no_sensor)
             return
         }
 
@@ -91,21 +93,17 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 beginMeasurement()
             } else {
-                statusText.text = "بدون اجازه‌ی دسترسی به سنسور بدن، اندازه‌گیری ممکن نیست."
-                countdownText.text = "ناموفق"
+                showFailure(R.string.no_permission)
             }
         }
     }
 
     private fun beginMeasurement() {
         sensorManager.registerListener(this, heartRateSensor, SensorManager.SENSOR_DELAY_NORMAL)
-        statusText.text = "انگشت خود را روی سنسور (کنار دوربین پشت) نگه دارید"
+        subtitleText.setText(R.string.place_finger)
 
         countDownTimer = object : CountDownTimer(MEASUREMENT_DURATION_MS, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val secondsLeft = (millisUntilFinished / 1000) + 1
-                countdownText.text = "$secondsLeft ثانیه مانده"
-            }
+            override fun onTick(millisUntilFinished: Long) {}
 
             override fun onFinish() {
                 finishMeasurement()
@@ -113,29 +111,34 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         }.start()
     }
 
+    /** خطا: موج و ضربان قلب متوقف می‌شوند و پیام در زیرعنوان نشان داده می‌شود. */
+    private fun showFailure(messageRes: Int) {
+        waveView.stop()
+        pulseAnimator?.cancel()
+        titleText.setText(R.string.measure_failed)
+        subtitleText.setText(messageRes)
+    }
+
     private fun finishMeasurement() {
         if (measurementFinished) return
         measurementFinished = true
 
         sensorManager.unregisterListener(this)
-        ecgView.stop()
+        waveView.stop()
         pulseAnimator?.cancel()
 
         val finalBpm = if (readings.isNotEmpty()) readings.average().toInt() else 0
 
         if (finalBpm > 0) {
-            bpmText.text = "$finalBpm"
-            countdownText.text = "تمام شد ✓"
-            statusText.text = "رکورد با موفقیت ثبت شد"
+            titleText.text = "$finalBpm ${getString(R.string.bpm_unit)}"
+            subtitleText.setText(R.string.record_saved)
             HeartRateStorage.saveRecord(this, finalBpm, System.currentTimeMillis())
         } else {
-            countdownText.text = "داده‌ی کافی دریافت نشد"
-            statusText.text = "لطفاً دوباره امتحان کنید"
+            titleText.setText(R.string.no_data)
+            subtitleText.setText(R.string.try_again)
         }
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            finish()
-        }, 2000)
+        handler.postDelayed({ finish() }, 2000)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -145,20 +148,25 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
 
         if (bpm > 0) {
             readings.add(bpm)
-            bpmText.text = "$bpm"
-            ecgView.setSpeedFromBpm(bpm)
-            restartPulseAnimation(bpm)
+            if (!gotFirstReading) {
+                gotFirstReading = true
+                subtitleText.setText(R.string.stay_still)
+            }
+            waveView.setSignalActive(true)
+            waveView.setBpm(bpm)
+            updatePulseAnimation(bpm)
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         if (measurementFinished) return
-        statusText.text = when (accuracy) {
-            SensorManager.SENSOR_STATUS_UNRELIABLE -> "دقت نامعتبر — انگشت را ثابت نگه دارید"
-            SensorManager.SENSOR_STATUS_ACCURACY_LOW -> "دقت: پایین"
-            SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "دقت: متوسط"
-            SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "دقت: بالا"
-            else -> statusText.text.toString()
+        when (accuracy) {
+            SensorManager.SENSOR_STATUS_NO_CONTACT,
+            SensorManager.SENSOR_STATUS_UNRELIABLE -> {
+                subtitleText.setText(R.string.hold_steady)
+                waveView.setSignalActive(false)
+            }
+            else -> if (gotFirstReading) subtitleText.setText(R.string.stay_still)
         }
     }
 
@@ -166,8 +174,8 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         pulseAnimator?.cancel()
         pulseAnimator = ObjectAnimator.ofPropertyValuesHolder(
             heartIcon,
-            PropertyValuesHolder.ofFloat("scaleX", 1f, 1.25f, 1f),
-            PropertyValuesHolder.ofFloat("scaleY", 1f, 1.25f, 1f)
+            PropertyValuesHolder.ofFloat("scaleX", 1f, 1.15f, 1f),
+            PropertyValuesHolder.ofFloat("scaleY", 1f, 1.15f, 1f)
         ).apply {
             duration = periodMs
             repeatCount = ObjectAnimator.INFINITE
@@ -175,9 +183,11 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private fun restartPulseAnimation(bpm: Int) {
-        val periodMs = (60_000L / bpm).coerceIn(300L, 1500L)
-        startPulseAnimation(periodMs)
+    /** انیمیشن قلب فقط وقتی ضربان چند واحد عوض شده دوباره راه می‌افتد (برای جلوگیری از پرش). */
+    private fun updatePulseAnimation(bpm: Int) {
+        if (abs(bpm - pulseBpm) < 3) return
+        pulseBpm = bpm
+        startPulseAnimation((60_000L / bpm).coerceIn(300L, 1500L))
     }
 
     override fun onDestroy() {
@@ -185,6 +195,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         sensorManager.unregisterListener(this)
         countDownTimer?.cancel()
         pulseAnimator?.cancel()
-        ecgView.stop()
+        handler.removeCallbacksAndMessages(null)
+        waveView.stop()
     }
 }
