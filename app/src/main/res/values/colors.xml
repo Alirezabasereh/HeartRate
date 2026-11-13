@@ -1,0 +1,12 @@
+<resources>
+    <color name="heart_red">#FF4365</color>
+    <color name="heart_red_dark">#C21858</color>
+    <color name="heart_purple">#3A1C5A</color>
+    <color name="bg_dark">#1B1033</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="text_primary">#2B2B3C</color>
+    <color name="text_secondary">#9191A6</color>
+    <color name="accent_green">#3DDC97</color>
+    <color name="accent_orange">#FFB84D</color>
+    <color name="white_90">#E6FFFFFF</color>
+</resources>

@@ -12,7 +12,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="Heart Rate Reader"
+        android:label="پایشگر ضربان قلب"
         android:theme="@style/Theme.HeartRate">
 
         <activity
@@ -23,6 +23,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MeasurementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HeartRate" />
+
     </application>
 
 </manifest>
