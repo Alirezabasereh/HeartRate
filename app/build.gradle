@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 
 android {
     namespace 'com.example.heartrate'
-    compileSdkVersion 30
+    compileSdkVersion 33
 
     defaultConfig {
         applicationId "com.example.heartrate"
