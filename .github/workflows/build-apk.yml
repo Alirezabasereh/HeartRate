@@ -19,6 +19,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Add Android cmdline-tools to PATH
+        run: |
+          echo "ANDROID_HOME is: $ANDROID_HOME"
+          SDKMANAGER_BIN_DIR=$(dirname "$(find "$ANDROID_HOME/cmdline-tools" -type f -name "sdkmanager" | head -n 1)")
+          echo "Found sdkmanager in: $SDKMANAGER_BIN_DIR"
+          echo "$SDKMANAGER_BIN_DIR" >> "$GITHUB_PATH"
+
       - name: Install required Android SDK packages
         run: |
           yes | sdkmanager --licenses || true
