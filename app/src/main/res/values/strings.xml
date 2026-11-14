@@ -25,7 +25,7 @@
     <!-- Measuring screen -->
     <string name="measuring">Measuring…</string>
     <string name="place_finger">Place your finger on the sensor</string>
-    <string name="stay_still">Try to stay still and quiet.</string>
+    <string name="finger_detected">Hold your finger steady</string>
     <string name="hold_steady">Place your finger on the sensor and don\'t remove it</string>
     <string name="did_you_know">Did you know?</string>
     <string name="live_bpm_placeholder">--</string>
@@ -51,9 +51,6 @@
     <string name="kcal_unit">kcal</string>
     <string name="goal_format">/%1$s steps</string>
     <string name="no_step_sensor">No step sensor found</string>
-    <string name="sensor_list">Device sensors</string>
-    <string name="sensor_list_title">Sensors on this device (%1$d)</string>
-    <string name="close">Close</string>
     <string name="step_settings">Goal &amp; body settings</string>
 
     <!-- Steps page -->
@@ -95,4 +92,31 @@
         <item>Regular physical activity strengthens the heart so it can pump more blood with each beat, which often lowers the resting heart rate over time.</item>
         <item>World Heart Day is observed every year on 29 September to raise awareness about cardiovascular disease.</item>
     </string-array>
+
+    <!-- Daily activity (summary) page -->
+    <string name="summary_title">Daily activity</string>
+    <string name="summary_goal_reached">Goal reached. Great job!</string>
+    <string name="summary_steps_left">%1$s steps to reach your goal</string>
+    <string name="col_steps">Steps</string>
+    <string name="col_active">Active time</string>
+    <string name="col_calories">Calories</string>
+    <string name="of_target_format">%1$d%% of %2$s</string>
+    <string name="target_steps_format">%1$s steps</string>
+    <string name="target_min_format">%1$d min</string>
+    <string name="target_kcal_format">%1$s kcal</string>
+    <string name="row_total_steps">Total steps</string>
+    <string name="row_distance">Distance</string>
+    <string name="row_active_total">Active time</string>
+    <string name="row_calories">Calories</string>
+    <string name="row_latest">Latest</string>
+    <string name="row_hr_avg">Average</string>
+    <string name="row_hr_min">Lowest</string>
+    <string name="row_hr_max">Highest</string>
+    <string name="row_hr_count">Measurements</string>
+    <string name="section_hr_week">Heart rate · last 7 days</string>
+    <string name="km_value">%1$s km</string>
+    <string name="kcal_value">%1$s kcal</string>
+    <string name="bpm_value">%1$d bpm</string>
+    <string name="bpm_zone_value">%1$d bpm · %2$s</string>
+    <string name="no_hr_week">No measurements in the last 7 days</string>
 </resources>

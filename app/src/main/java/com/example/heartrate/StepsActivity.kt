@@ -1,9 +1,5 @@
 package com.example.heartrate
 
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,12 +13,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 /** Steps page: 7-day strip, selected-day details, hourly chart and weekly summary. */
-class StepsActivity : AppCompatActivity(), SensorEventListener {
+class StepsActivity : AppCompatActivity() {
 
-    private lateinit var sensorManager: SensorManager
-    private var stepSensor: Sensor? = null
-    private var latestCounter = -1f
-    private var lastRecordMs = 0L
+    private lateinit var stepUpdater: StepLiveUpdater
 
     private lateinit var dayStrip: DayStripView
     private lateinit var dateText: TextView
@@ -59,8 +52,8 @@ class StepsActivity : AppCompatActivity(), SensorEventListener {
             ContextCompat.getColor(this, R.color.step_green)
         )
 
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        // At midnight the strip moves on to the new day (steps reset to 0 for the new day).
+        stepUpdater = StepLiveUpdater(this, onNewDay = { selected = -1 }) { reload() }
 
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
         findViewById<View>(R.id.menuButton).setOnClickListener { anchor ->
@@ -80,30 +73,14 @@ class StepsActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
-        stepSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
+        stepUpdater.start()
         reload()
     }
 
     override fun onPause() {
         super.onPause()
-        sensorManager.unregisterListener(this)
-        if (latestCounter >= 0f) StepTracker.record(this, latestCounter)
+        stepUpdater.stop()
     }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        val v = event?.values?.getOrNull(0) ?: return
-        latestCounter = v
-        val now = System.currentTimeMillis()
-        if (now - lastRecordMs > 2_000L) {
-            lastRecordMs = now
-            StepTracker.record(this, v, now)
-            reload()
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     /** Re-reads the stored data; keeps the selected day (defaults to today). */
     private fun reload() {

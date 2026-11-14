@@ -1,10 +1,6 @@
 package com.example.heartrate
 
 import android.content.Intent
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Bundle
 import android.view.View
 import android.widget.PopupMenu
@@ -17,12 +13,9 @@ import java.util.Date
 import java.util.Locale
 
 /** Home screen: steps summary, steps card and heart-rate card. */
-class HomeActivity : AppCompatActivity(), SensorEventListener {
+class HomeActivity : AppCompatActivity() {
 
-    private lateinit var sensorManager: SensorManager
-    private var stepSensor: Sensor? = null
-    private var latestCounter = -1f
-    private var lastRecordMs = 0L
+    private lateinit var stepUpdater: StepLiveUpdater
 
     private lateinit var summaryStepsText: TextView
     private lateinit var summaryMinsText: TextView
@@ -58,14 +51,15 @@ class HomeActivity : AppCompatActivity(), SensorEventListener {
         homeZoneText = findViewById(R.id.homeZoneText)
         homeRangeBar = findViewById(R.id.homeRangeBar)
 
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        stepUpdater = StepLiveUpdater(this) { refreshSteps() }
 
-        val openSteps = View.OnClickListener {
+        // Heart-rings card -> daily activity summary; steps card -> steps page
+        findViewById<View>(R.id.summaryCard).setOnClickListener {
+            startActivity(Intent(this, SummaryActivity::class.java))
+        }
+        stepsCard.setOnClickListener {
             startActivity(Intent(this, StepsActivity::class.java))
         }
-        findViewById<View>(R.id.summaryCard).setOnClickListener(openSteps)
-        stepsCard.setOnClickListener(openSteps)
         findViewById<View>(R.id.heartCard).setOnClickListener {
             startActivity(Intent(this, HeartRateActivity::class.java))
         }
@@ -75,9 +69,8 @@ class HomeActivity : AppCompatActivity(), SensorEventListener {
         findViewById<View>(R.id.menuButton).setOnClickListener { anchor ->
             val popup = PopupMenu(this, anchor)
             popup.menu.add(0, 1, 0, R.string.step_settings)
-            popup.menu.add(0, 2, 1, R.string.sensor_list)
-            popup.setOnMenuItemClickListener { item ->
-                if (item.itemId == 1) StepSettingsDialog.show(this) { refresh() } else showSensorList()
+            popup.setOnMenuItemClickListener {
+                StepSettingsDialog.show(this) { refresh() }
                 true
             }
             popup.show()
@@ -87,41 +80,13 @@ class HomeActivity : AppCompatActivity(), SensorEventListener {
     override fun onResume() {
         super.onResume()
         StepScheduler.schedule(this)
-        stepSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
+        stepUpdater.start()
         refresh()
     }
 
     override fun onPause() {
         super.onPause()
-        sensorManager.unregisterListener(this)
-        if (latestCounter >= 0f) StepTracker.record(this, latestCounter)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        val v = event?.values?.getOrNull(0) ?: return
-        latestCounter = v
-        val now = System.currentTimeMillis()
-        if (now - lastRecordMs > 2_000L) {
-            lastRecordMs = now
-            StepTracker.record(this, v, now)
-            refreshSteps()
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    /** Lists every sensor the phone exposes (useful to see what hardware apps can actually use). */
-    private fun showSensorList() {
-        val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
-            .sortedBy { it.name.lowercase(Locale.US) }
-        val text = sensors.joinToString("\n\n") { "${it.name}\n${it.stringType} (type ${it.type})" }
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(getString(R.string.sensor_list_title, sensors.size))
-            .setMessage(text)
-            .setPositiveButton(R.string.close, null)
-            .show()
+        stepUpdater.stop()
     }
 
     private fun refresh() {
@@ -130,7 +95,7 @@ class HomeActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun refreshSteps() {
-        if (stepSensor == null) {
+        if (stepUpdater.sensor == null) {
             stepsValueText.text = "--"
             stepsGoalText.setText(R.string.no_step_sensor)
             return

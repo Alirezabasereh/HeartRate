@@ -174,6 +174,14 @@ object StepTracker {
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
 
+    fun millisUntilNextDay(now: Long = System.currentTimeMillis()): Long {
+        val next = Calendar.getInstance().apply {
+            timeInMillis = startOfDay(now)
+            add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return next.timeInMillis - now
+    }
+
     private fun dayKey(millis: Long): String =
         SimpleDateFormat("yyyyMMdd", Locale.US).format(millis)
 
