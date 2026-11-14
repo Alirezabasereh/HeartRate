@@ -10,6 +10,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -21,9 +24,11 @@ import kotlin.math.abs
 
 /**
  * Flow:
- *  1. Wait (no time limit) until the sensor delivers its first valid heart-rate value.
- *  2. From that first value, keep reading for exactly 10 seconds.
- *  3. Save the median of the readings and open that record's page.
+ *  1. Wait (no time limit) until the finger is on the sensor and the first valid value arrives.
+ *  2. Count 10 seconds from that first value, showing a progress ring and (from 40%) the live BPM.
+ *  3. If the finger is lifted at any point, the count is cancelled and — once the finger is back —
+ *     starts again from zero.
+ *  4. When the 10 seconds complete, save the median and open that record's page.
  */
 class MeasurementActivity : AppCompatActivity(), SensorEventListener {
 
@@ -34,20 +39,42 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var heartIcon: ImageView
     private lateinit var titleText: TextView
     private lateinit var subtitleText: TextView
+    private lateinit var progressRow: View
+    private lateinit var progressRing: ProgressRingView
+    private lateinit var liveBpmText: TextView
     private lateinit var waveView: PpgWaveView
 
     private var pulseAnimator: ObjectAnimator? = null
     private var pulseBpm = 0
     private var countDownTimer: CountDownTimer? = null
+    private val handler = Handler(Looper.getMainLooper())
+
     private val readings = mutableListOf<Int>()
-    private var gotFirstReading = false
-    private var measurementFinished = false
+    private var measuring = false
+    private var finished = false
+    private var lastValidReadingAt = 0L
+
+    /** Silence from the sensor for this long while measuring is treated as "finger lifted". */
+    private val watchdog = object : Runnable {
+        override fun run() {
+            if (!measuring || finished) return
+            if (SystemClock.elapsedRealtime() - lastValidReadingAt > NO_SIGNAL_TIMEOUT_MS) {
+                onFingerLost()
+            } else {
+                handler.postDelayed(this, 500L)
+            }
+        }
+    }
 
     companion object {
         private const val REQUEST_BODY_SENSORS = 100
         private const val MEASUREMENT_DURATION_MS = 10_000L
+        private const val NO_SIGNAL_TIMEOUT_MS = 6_000L
+        private const val LIVE_BPM_FROM_PROGRESS = 0.4f
         private const val MIN_VALID_BPM = 30
         private const val MAX_VALID_BPM = 220
+        private const val TIPS_PREFS = "tips"
+        private const val KEY_TIP_INDEX = "tip_index"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,9 +84,13 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         heartIcon = findViewById(R.id.heartIcon)
         titleText = findViewById(R.id.titleText)
         subtitleText = findViewById(R.id.subtitleText)
+        progressRow = findViewById(R.id.progressRow)
+        progressRing = findViewById(R.id.progressRing)
+        liveBpmText = findViewById(R.id.liveBpmText)
         waveView = findViewById(R.id.waveView)
 
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
+        showNextTip()
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         heartRateSensor = findHeartRateSensor()
@@ -72,14 +103,23 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
             showFailure(R.string.no_sensor)
             return
         }
-
         checkPermissionAndStart()
     }
 
-    /**
-     * The standard heart-rate sensor first; if the device doesn't expose it under
-     * TYPE_HEART_RATE, look for any sensor whose name/type mentions heart rate.
-     */
+    /** A different "Did you know?" fact every time the screen opens. */
+    private fun showNextTip() {
+        val tips = resources.getStringArray(R.array.heart_tips)
+        if (tips.isEmpty()) return
+        val prefs = getSharedPreferences(TIPS_PREFS, MODE_PRIVATE)
+        val index = if (prefs.contains(KEY_TIP_INDEX)) {
+            (prefs.getInt(KEY_TIP_INDEX, 0) + 1) % tips.size
+        } else {
+            java.util.Random().nextInt(tips.size)
+        }
+        prefs.edit().putInt(KEY_TIP_INDEX, index).apply()
+        findViewById<TextView>(R.id.tipText).text = tips[index]
+    }
+
     private fun findHeartRateSensor(): Sensor? {
         sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)?.let { return it }
         return sensorManager.getSensorList(Sensor.TYPE_ALL).firstOrNull {
@@ -95,9 +135,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
             != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.BODY_SENSORS),
-                REQUEST_BODY_SENSORS
+                this, arrayOf(Manifest.permission.BODY_SENSORS), REQUEST_BODY_SENSORS
             )
         } else {
             startListening()
@@ -119,17 +157,12 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    /** Starts listening only; the 10-second timer starts at the first valid reading. */
     private fun startListening() {
-        if (listening || measurementFinished) return
+        if (listening || finished) return
         listening = sensorManager.registerListener(
             this, heartRateSensor, SensorManager.SENSOR_DELAY_FASTEST
         )
-        if (listening) {
-            subtitleText.setText(R.string.place_finger)
-        } else {
-            showFailure(R.string.no_sensor)
-        }
+        if (listening) subtitleText.setText(R.string.place_finger) else showFailure(R.string.no_sensor)
     }
 
     private fun stopListening() {
@@ -139,13 +172,53 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private fun startMeasurementTimer() {
-        countDownTimer = object : CountDownTimer(MEASUREMENT_DURATION_MS, 1000) {
-            override fun onTick(millisUntilFinished: Long) {}
+    // ---------- Measurement state ----------
+
+    /** First valid reading after waiting (or after the finger was lifted): count 10 s from now. */
+    private fun startMeasuring() {
+        measuring = true
+        subtitleText.setText(R.string.stay_still)
+        progressRow.visibility = View.VISIBLE
+        progressRing.setProgress(0f)
+        liveBpmText.setText(R.string.live_bpm_placeholder)
+
+        countDownTimer?.cancel()
+        countDownTimer = object : CountDownTimer(MEASUREMENT_DURATION_MS, 100) {
+            override fun onTick(millisUntilFinished: Long) {
+                val progress = 1f - millisUntilFinished / MEASUREMENT_DURATION_MS.toFloat()
+                progressRing.setProgress(progress)
+                if (progress >= LIVE_BPM_FROM_PROGRESS) {
+                    currentMedian()?.let { liveBpmText.text = "$it" }
+                }
+            }
+
             override fun onFinish() {
+                progressRing.setProgress(1f)
                 finishMeasurement()
             }
         }.start()
+
+        handler.removeCallbacks(watchdog)
+        handler.postDelayed(watchdog, 500L)
+    }
+
+    /** Finger lifted: cancel the count, discard what was read, and ask to put the finger back. */
+    private fun onFingerLost() {
+        if (!measuring || finished) return
+        measuring = false
+        countDownTimer?.cancel()
+        handler.removeCallbacks(watchdog)
+        readings.clear()
+        progressRing.setProgress(0f)
+        liveBpmText.setText(R.string.live_bpm_placeholder)
+        subtitleText.setText(R.string.hold_steady)
+        waveView.setSignalActive(false)
+    }
+
+    private fun currentMedian(): Int? {
+        if (readings.isEmpty()) return null
+        val sorted = readings.sorted()
+        return sorted[sorted.size / 2]
     }
 
     private fun showFailure(messageRes: Int) {
@@ -156,43 +229,41 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun finishMeasurement() {
-        if (measurementFinished) return
-        measurementFinished = true
+        if (finished) return
+        finished = true
+        measuring = false
+        handler.removeCallbacks(watchdog)
 
         stopListening()
         waveView.stop()
         pulseAnimator?.cancel()
 
-        // Median is robust against a few noisy values at the start/end.
-        val finalBpm = if (readings.isNotEmpty()) {
-            val sorted = readings.sorted()
-            sorted[sorted.size / 2]
-        } else 0
-
+        val finalBpm = currentMedian() ?: 0
         if (finalBpm > 0) {
             val timestamp = System.currentTimeMillis()
             HeartRateStorage.saveRecord(this, finalBpm, timestamp)
-            // Land on the new record's page; Back from there returns to the main screen.
             startActivity(RecordDetailActivity.intent(this, HeartRecord(finalBpm, timestamp)))
         }
         finish()
     }
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (measurementFinished) return
-        event ?: return
-        if (event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT) return
+    // ---------- Sensor callbacks ----------
 
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (finished) return
+        event ?: return
         val bpm = event.values.getOrNull(0)?.toInt() ?: return
+
+        // No contact reported by the sensor.
+        if (event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT || bpm <= 0) {
+            if (measuring) onFingerLost()
+            return
+        }
         if (bpm < MIN_VALID_BPM || bpm > MAX_VALID_BPM) return
 
+        lastValidReadingAt = SystemClock.elapsedRealtime()
         readings.add(bpm)
-
-        if (!gotFirstReading) {
-            gotFirstReading = true
-            subtitleText.setText(R.string.stay_still)
-            startMeasurementTimer() // 10 seconds counted from the first detected beat
-        }
+        if (!measuring) startMeasuring()
 
         waveView.setSignalActive(true)
         waveView.setBpm(bpm)
@@ -200,16 +271,15 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        if (measurementFinished) return
-        when (accuracy) {
-            SensorManager.SENSOR_STATUS_NO_CONTACT,
-            SensorManager.SENSOR_STATUS_UNRELIABLE -> {
-                subtitleText.setText(R.string.hold_steady)
-                waveView.setSignalActive(false)
-            }
-            else -> if (gotFirstReading) subtitleText.setText(R.string.stay_still)
+        if (finished) return
+        if (accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT) {
+            if (measuring) onFingerLost()
+        } else if (measuring) {
+            subtitleText.setText(R.string.stay_still)
         }
     }
+
+    // ---------- Heart icon animation ----------
 
     private fun startPulseAnimation(periodMs: Long) {
         pulseAnimator?.cancel()
@@ -233,8 +303,9 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     /** Leaving the screen mid-measurement cancels it so the sensor isn't left running. */
     override fun onStop() {
         super.onStop()
-        if (!measurementFinished && !isChangingConfigurations) {
+        if (!finished && !isChangingConfigurations) {
             countDownTimer?.cancel()
+            handler.removeCallbacks(watchdog)
             stopListening()
             finish()
         }
@@ -244,6 +315,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         super.onDestroy()
         stopListening()
         countDownTimer?.cancel()
+        handler.removeCallbacksAndMessages(null)
         pulseAnimator?.cancel()
         waveView.stop()
     }

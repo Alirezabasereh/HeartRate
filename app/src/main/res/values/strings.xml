@@ -24,11 +24,11 @@
 
     <!-- Measuring screen -->
     <string name="measuring">Measuring…</string>
-    <string name="place_finger">Place your finger on the sensor next to the camera</string>
+    <string name="place_finger">Place your finger on the sensor</string>
     <string name="stay_still">Try to stay still and quiet.</string>
-    <string name="hold_steady">Place your finger on the sensor and hold steady</string>
+    <string name="hold_steady">Place your finger on the sensor and don\'t remove it</string>
     <string name="did_you_know">Did you know?</string>
-    <string name="tip_resting_hr">For adults aged 18 years or above, a normal resting heart rate is between 60 and 100 bpm, according to the American Heart Association.</string>
+    <string name="live_bpm_placeholder">--</string>
     <string name="measure_failed">Measurement failed</string>
     <string name="no_sensor">No heart rate sensor was found on this device.</string>
     <string name="no_permission">Body sensor permission is required to measure your heart rate.</string>
@@ -51,6 +51,9 @@
     <string name="kcal_unit">kcal</string>
     <string name="goal_format">/%1$s steps</string>
     <string name="no_step_sensor">No step sensor found</string>
+    <string name="sensor_list">Device sensors</string>
+    <string name="sensor_list_title">Sensors on this device (%1$d)</string>
+    <string name="close">Close</string>
     <string name="step_settings">Goal &amp; body settings</string>
 
     <!-- Steps page -->
@@ -77,4 +80,19 @@
     <string name="hint_height">Height (cm)</string>
     <string name="hint_weight">Weight (kg)</string>
     <string name="save">Save</string>
+    <string-array name="heart_tips">
+        <item>For adults aged 18 or older, a normal resting heart rate is between 60 and 100 beats per minute, according to the American Heart Association.</item>
+        <item>Cardiovascular diseases are the leading cause of death worldwide, taking an estimated 17.9 million lives each year, according to the World Health Organization.</item>
+        <item>The WHO says most cardiovascular diseases can be prevented by addressing risk factors such as tobacco use, an unhealthy diet, physical inactivity and harmful use of alcohol.</item>
+        <item>The WHO recommends that adults get at least 150 to 300 minutes of moderate-intensity aerobic activity per week to protect their health, including their heart.</item>
+        <item>The WHO recommends keeping salt intake below 5 grams per day (about one teaspoon) to help lower blood pressure and the risk of heart disease.</item>
+        <item>Heart attacks and strokes account for about 85% of all deaths from cardiovascular disease, according to the World Health Organization.</item>
+        <item>Well-trained athletes can have a resting heart rate as low as 40 beats per minute, which can be perfectly normal for them.</item>
+        <item>A common estimate of your maximum heart rate is 220 minus your age, according to the American Heart Association.</item>
+        <item>Your resting heart rate can be raised by stress, caffeine, fever, dehydration, poor sleep and some medications.</item>
+        <item>For the most representative reading, sit down and rest for a few minutes before measuring your resting heart rate.</item>
+        <item>Your heart beats about 100,000 times a day, pumping blood to every part of your body.</item>
+        <item>Regular physical activity strengthens the heart so it can pump more blood with each beat, which often lowers the resting heart rate over time.</item>
+        <item>World Heart Day is observed every year on 29 September to raise awareness about cardiovascular disease.</item>
+    </string-array>
 </resources>

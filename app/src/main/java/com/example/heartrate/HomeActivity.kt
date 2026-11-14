@@ -75,8 +75,9 @@ class HomeActivity : AppCompatActivity(), SensorEventListener {
         findViewById<View>(R.id.menuButton).setOnClickListener { anchor ->
             val popup = PopupMenu(this, anchor)
             popup.menu.add(0, 1, 0, R.string.step_settings)
-            popup.setOnMenuItemClickListener {
-                StepSettingsDialog.show(this) { refresh() }
+            popup.menu.add(0, 2, 1, R.string.sensor_list)
+            popup.setOnMenuItemClickListener { item ->
+                if (item.itemId == 1) StepSettingsDialog.show(this) { refresh() } else showSensorList()
                 true
             }
             popup.show()
@@ -110,6 +111,18 @@ class HomeActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    /** Lists every sensor the phone exposes (useful to see what hardware apps can actually use). */
+    private fun showSensorList() {
+        val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
+            .sortedBy { it.name.lowercase(Locale.US) }
+        val text = sensors.joinToString("\n\n") { "${it.name}\n${it.stringType} (type ${it.type})" }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.sensor_list_title, sensors.size))
+            .setMessage(text)
+            .setPositiveButton(R.string.close, null)
+            .show()
+    }
 
     private fun refresh() {
         refreshSteps()

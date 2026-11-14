@@ -39,6 +39,7 @@ class PpgWaveView @JvmOverloads constructor(
     private var lastNanos = 0L
 
     private var bpm = 72f
+    private var targetBpm = 72f
     private var beatPhase = 0f
     private var beatAmp = 1f
     private var driftPhase = 0f
@@ -84,7 +85,7 @@ class PpgWaveView @JvmOverloads constructor(
 
     /** ضربان فعلی؛ سرعت ضرب‌های موج را تعیین می‌کند. */
     fun setBpm(value: Int) {
-        bpm = value.toFloat().coerceIn(40f, 180f)
+        targetBpm = value.toFloat().coerceIn(40f, 180f)
     }
 
     /** وقتی انگشت روی سنسور نیست موج تقریباً صاف می‌شود. */
@@ -93,7 +94,9 @@ class PpgWaveView @JvmOverloads constructor(
     }
 
     private fun pushSample() {
-        amp += (targetAmp - amp) * 0.03f
+        // Ease towards the targets so the line changes smoothly and never jumps or restarts.
+        amp += (targetAmp - amp) * 0.015f
+        bpm += (targetBpm - bpm) * 0.02f
 
         beatPhase += bpm / 60f * (sampleMs / 1000f)
         if (beatPhase >= 1f) {
