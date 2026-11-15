@@ -1,11 +1,13 @@
 package com.example.heartrate
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
 
 /** Rounded horizontal progress bar (track + fill). */
@@ -22,6 +24,7 @@ class PillProgressView @JvmOverloads constructor(
     }
     private val rect = RectF()
     private var progress = 0f
+    private var animator: ValueAnimator? = null
 
     fun setColors(track: Int, fill: Int) {
         trackPaint.color = track
@@ -29,10 +32,26 @@ class PillProgressView @JvmOverloads constructor(
         invalidate()
     }
 
-    /** 0..1 (values above 1 are clamped). */
+    /** 0..1 (values above 1 are clamped). The bar glides to the new value. */
     fun setProgress(value: Float) {
-        progress = value.coerceIn(0f, 1f)
-        invalidate()
+        val target = value.coerceIn(0f, 1f)
+        if (target == progress) return
+        animator?.cancel()
+        val from = progress
+        animator = ValueAnimator.ofFloat(from, target).apply {
+            duration = 500L
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                progress = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        animator?.cancel()
+        super.onDetachedFromWindow()
     }
 
     override fun onDraw(canvas: Canvas) {

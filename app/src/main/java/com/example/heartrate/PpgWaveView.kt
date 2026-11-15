@@ -89,13 +89,19 @@ class PpgWaveView @JvmOverloads constructor(
     }
 
     /** وقتی انگشت روی سنسور نیست موج تقریباً صاف می‌شود. */
-    fun setSignalActive(active: Boolean) {
-        targetAmp = if (active) 1f else IDLE_AMP
+    fun setSignalActive(active: Boolean) = setSignalLevel(if (active) 1f else 0f)
+
+    /**
+     * Signal strength 0..1 (0 = no finger, 1 = strong signal). The wave starts moving as soon as
+     * the level rises and grows with it; it eases up quickly and down a bit slower.
+     */
+    fun setSignalLevel(level: Float) {
+        targetAmp = IDLE_AMP + (1f - IDLE_AMP) * level.coerceIn(0f, 1f)
     }
 
     private fun pushSample() {
         // Ease towards the targets so the line changes smoothly and never jumps or restarts.
-        amp += (targetAmp - amp) * 0.015f
+        amp += (targetAmp - amp) * (if (targetAmp > amp) 0.05f else 0.025f)
         bpm += (targetBpm - bpm) * 0.02f
 
         beatPhase += bpm / 60f * (sampleMs / 1000f)

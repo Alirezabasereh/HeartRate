@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <!-- Re-schedules the hourly step snapshots after the phone restarts -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Keeps the step counter running in the background (foreground service) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <uses-feature
         android:name="android.hardware.sensor.stepcounter"
@@ -40,6 +42,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".StepTrackingService"
+            android:exported="false" />
+
+        <activity
             android:name=".SummaryActivity"
             android:exported="false" />
 
@@ -48,10 +58,47 @@
             android:exported="false" />
 
         <receiver
+            android:name=".DailyActivityWidget"
+            android:exported="true"
+            android:label="@string/widget_daily_activity">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_daily_activity_info" />
+        </receiver>
+
+        <receiver
+            android:name=".StepsWidget"
+            android:exported="true"
+            android:label="@string/widget_steps">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_steps_info" />
+        </receiver>
+
+        <receiver
+            android:name=".DailyActivityLargeWidget"
+            android:exported="true"
+            android:label="@string/widget_daily_activity">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_daily_activity_large_info" />
+        </receiver>
+
+        <receiver
             android:name=".StepAlarmReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

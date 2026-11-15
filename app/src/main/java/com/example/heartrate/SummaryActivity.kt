@@ -19,6 +19,16 @@ class SummaryActivity : AppCompatActivity() {
     private lateinit var stepUpdater: StepLiveUpdater
     private val numberFormat = NumberFormat.getIntegerInstance(Locale.US)
 
+    private var stepsTarget = ""
+    private var activeTarget = ""
+    private var kcalTarget = ""
+    private val stepsValueAnim = NumberAnimator { findViewById<TextView>(R.id.sumStepsValue).text = numberFormat.format(it) }
+    private val activeValueAnim = NumberAnimator(250L) { findViewById<TextView>(R.id.sumActiveValue).text = "$it min" }
+    private val kcalValueAnim = NumberAnimator(120L) { findViewById<TextView>(R.id.sumKcalValue).text = numberFormat.format(it) }
+    private val stepsPctAnim = NumberAnimator(200L) { setSub(R.id.sumStepsSub, it, stepsTarget) }
+    private val activePctAnim = NumberAnimator(200L) { setSub(R.id.sumActiveSub, it, activeTarget) }
+    private val kcalPctAnim = NumberAnimator(200L) { setSub(R.id.sumKcalSub, it, kcalTarget) }
+
     private lateinit var rings: HeartRingsView
     private lateinit var statusText: TextView
     private lateinit var weekCard: LinearLayout
@@ -34,6 +44,15 @@ class SummaryActivity : AppCompatActivity() {
         heartCard = findViewById(R.id.heartCard)
 
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
+        findViewById<View>(R.id.menuButton).setOnClickListener { anchor ->
+            val popup = android.widget.PopupMenu(this, anchor)
+            popup.menu.add(0, 1, 0, R.string.step_settings)
+            popup.setOnMenuItemClickListener {
+                startActivity(android.content.Intent(this, SettingsActivity::class.java))
+                true
+            }
+            popup.show()
+        }
         findViewById<View>(R.id.sumStepsColumn).setOnClickListener {
             startActivity(Intent(this, StepsActivity::class.java))
         }
@@ -63,12 +82,14 @@ class SummaryActivity : AppCompatActivity() {
 
     private fun renderToday() {
         val goal = StepTracker.getGoal(this)
+        val activeGoal = StepTracker.getActiveGoal(this)
+        val calorieGoal = StepTracker.getCalorieGoal(this)
         val steps = StepTracker.today(this).steps
         val stats = StepTracker.stats(this, steps)
 
         val stepsP = steps.toFloat() / goal
-        val minP = stats.activeMinutes.toFloat() / StepTracker.ACTIVE_MINUTES_TARGET
-        val kcalP = stats.calories.toFloat() / StepTracker.CALORIES_TARGET
+        val minP = stats.activeMinutes.toFloat() / activeGoal
+        val kcalP = stats.calories.toFloat() / calorieGoal
         rings.setProgress(stepsP, minP, kcalP)
 
         statusText.text = when {
@@ -77,24 +98,25 @@ class SummaryActivity : AppCompatActivity() {
             else -> getString(R.string.summary_steps_left, numberFormat.format(goal - steps))
         }
 
-        setColumn(
-            R.id.sumStepsValue, R.id.sumStepsSub, numberFormat.format(steps), stepsP,
-            getString(R.string.target_steps_format, numberFormat.format(goal))
-        )
-        setColumn(
-            R.id.sumActiveValue, R.id.sumActiveSub, "${stats.activeMinutes} min", minP,
-            getString(R.string.target_min_format, StepTracker.ACTIVE_MINUTES_TARGET)
-        )
-        setColumn(
-            R.id.sumKcalValue, R.id.sumKcalSub, numberFormat.format(stats.calories), kcalP,
-            getString(R.string.target_kcal_format, numberFormat.format(StepTracker.CALORIES_TARGET))
-        )
+        stepsTarget = getString(R.string.target_steps_format, numberFormat.format(goal))
+        activeTarget = getString(R.string.target_min_format, activeGoal)
+        kcalTarget = getString(R.string.target_kcal_format, numberFormat.format(calorieGoal))
+
+        stepsValueAnim.set(steps)
+        activeValueAnim.set(stats.activeMinutes)
+        kcalValueAnim.set(stats.calories)
+        stepsPctAnim.set((stepsP * 100).toInt())
+        activePctAnim.set((minP * 100).toInt())
+        kcalPctAnim.set((kcalP * 100).toInt())
+
+        // A changed goal changes the target text even when the percentage stays the same.
+        setSub(R.id.sumStepsSub, stepsPctAnim.current, stepsTarget)
+        setSub(R.id.sumActiveSub, activePctAnim.current, activeTarget)
+        setSub(R.id.sumKcalSub, kcalPctAnim.current, kcalTarget)
     }
 
-    private fun setColumn(valueId: Int, subId: Int, value: String, progress: Float, target: String) {
-        findViewById<TextView>(valueId).text = value
-        findViewById<TextView>(subId).text =
-            getString(R.string.of_target_format, (progress * 100).toInt(), target)
+    private fun setSub(subId: Int, percent: Int, target: String) {
+        findViewById<TextView>(subId).text = getString(R.string.of_target_format, percent, target)
     }
 
     private fun renderWeek() {

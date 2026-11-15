@@ -72,11 +72,6 @@
     <string name="days_value">%1$d of 7 days</string>
 
     <!-- Settings dialog -->
-    <string name="settings_title">Goal &amp; body settings</string>
-    <string name="hint_goal">Daily step goal</string>
-    <string name="hint_height">Height (cm)</string>
-    <string name="hint_weight">Weight (kg)</string>
-    <string name="save">Save</string>
     <string-array name="heart_tips">
         <item>For adults aged 18 or older, a normal resting heart rate is between 60 and 100 beats per minute, according to the American Heart Association.</item>
         <item>Cardiovascular diseases are the leading cause of death worldwide, taking an estimated 17.9 million lives each year, according to the World Health Organization.</item>
@@ -119,4 +114,37 @@
     <string name="bpm_value">%1$d bpm</string>
     <string name="bpm_zone_value">%1$d bpm · %2$s</string>
     <string name="no_hr_week">No measurements in the last 7 days</string>
+
+    <!-- Widgets -->
+    <string name="widget_daily_activity">Daily activity</string>
+    <string name="widget_steps">Steps</string>
+    <string name="widget_goal_slash">/%1$s</string>
+    <string name="widget_goal_min">/%1$s min</string>
+    <string name="widget_goal_kcal">/%1$s kcal</string>
+
+    <!-- Settings page -->
+    <string name="settings_title">Goals &amp; body</string>
+    <string name="section_goals">Goals</string>
+    <string name="section_body">Body</string>
+    <string name="section_background">Background</string>
+    <string name="setting_steps">Daily steps</string>
+    <string name="setting_active">Active time</string>
+    <string name="setting_calories">Calories</string>
+    <string name="setting_height">Height</string>
+    <string name="setting_weight">Weight</string>
+    <string name="setting_background">Count steps in the background</string>
+    <string name="setting_background_desc">Keeps the step sensor running so steps are recorded and widgets stay live even when the app is closed. Shows a small silent notification.</string>
+    <string name="settings_note">Height and weight are used to estimate distance and calories.</string>
+    <string name="reset_defaults">Reset to defaults</string>
+    <string name="estimate_title">At your step goal</string>
+    <string name="estimate_km">≈ %1$s km</string>
+    <string name="estimate_kcal">≈ %1$s kcal</string>
+    <string name="estimate_min">≈ %1$d min active</string>
+    <string name="cm_value">%1$d cm</string>
+    <string name="kg_value">%1$d kg</string>
+
+    <!-- Step counting service notification -->
+    <string name="notif_channel">Step counting</string>
+    <string name="notif_title">Counting your steps</string>
+    <string name="notif_text">Today: %1$s steps</string>
 </resources>

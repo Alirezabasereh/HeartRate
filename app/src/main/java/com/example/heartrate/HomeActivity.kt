@@ -33,6 +33,13 @@ class HomeActivity : AppCompatActivity() {
 
     private val numberFormat = NumberFormat.getIntegerInstance(Locale.US)
 
+    // Numbers count up one by one instead of jumping when the sensor reports several steps at once.
+    private val summaryStepsAnim = NumberAnimator { summaryStepsText.text = numberFormat.format(it) }
+    private val summaryMinsAnim = NumberAnimator(250L) { summaryMinsText.text = numberFormat.format(it) }
+    private val summaryKcalAnim = NumberAnimator(120L) { summaryKcalText.text = numberFormat.format(it) }
+    private val stepsAnim = NumberAnimator { stepsValueText.text = numberFormat.format(it) }
+    private val percentAnim = NumberAnimator(200L) { stepsPercentText.text = "$it%" }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
@@ -70,7 +77,7 @@ class HomeActivity : AppCompatActivity() {
             val popup = PopupMenu(this, anchor)
             popup.menu.add(0, 1, 0, R.string.step_settings)
             popup.setOnMenuItemClickListener {
-                StepSettingsDialog.show(this) { refresh() }
+                startActivity(android.content.Intent(this, SettingsActivity::class.java))
                 true
             }
             popup.show()
@@ -80,6 +87,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         StepScheduler.schedule(this)
+        StepTrackingService.start(this)
         stepUpdater.start()
         refresh()
     }
@@ -106,18 +114,18 @@ class HomeActivity : AppCompatActivity() {
         val stats = StepTracker.stats(this, steps)
         val progress = steps.toFloat() / goal
 
-        summaryStepsText.text = numberFormat.format(steps)
-        summaryMinsText.text = numberFormat.format(stats.activeMinutes)
-        summaryKcalText.text = numberFormat.format(stats.calories)
+        summaryStepsAnim.set(steps)
+        summaryMinsAnim.set(stats.activeMinutes)
+        summaryKcalAnim.set(stats.calories)
         heartRings.setProgress(
             progress,
-            stats.activeMinutes.toFloat() / StepTracker.ACTIVE_MINUTES_TARGET,
-            stats.calories.toFloat() / StepTracker.CALORIES_TARGET
+            stats.activeMinutes.toFloat() / StepTracker.getActiveGoal(this),
+            stats.calories.toFloat() / StepTracker.getCalorieGoal(this)
         )
 
-        stepsValueText.text = numberFormat.format(steps)
+        stepsAnim.set(steps)
         stepsGoalText.text = getString(R.string.goal_format, numberFormat.format(goal))
-        stepsPercentText.text = "${(progress * 100).toInt()}%"
+        percentAnim.set((progress * 100).toInt())
         stepsProgress.setProgress(progress)
 
         // White card until the goal is reached, then the green "goal reached" card.

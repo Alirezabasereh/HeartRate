@@ -31,7 +31,8 @@ object StepSampler {
                 if (done) return
                 val v = event?.values?.getOrNull(0) ?: return
                 done = true
-                StepTracker.record(context, v)
+                StepTracker.record(context, v, force = true)
+                StepWidgets.updateAll(context)
                 sm.unregisterListener(this)
                 handler.removeCallbacksAndMessages(null)
                 pending?.finish()
@@ -56,7 +57,7 @@ object StepSampler {
     }
 }
 
-/** Hourly alarm that keeps the step history up to date while the app is closed. */
+/** 15-minute alarm that keeps the step history up to date while the app is closed. */
 object StepScheduler {
 
     private const val REQUEST_CODE = 4101
@@ -69,14 +70,15 @@ object StepScheduler {
             app, REQUEST_CODE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        // First run at the next quarter of an hour, then every 15 minutes.
         val first = Calendar.getInstance().apply {
-            add(Calendar.HOUR_OF_DAY, 1)
-            set(Calendar.MINUTE, 0)
+            val minute = get(Calendar.MINUTE)
+            add(Calendar.MINUTE, 15 - minute % 15)
             set(Calendar.SECOND, 30)
             set(Calendar.MILLISECOND, 0)
         }
         am.setInexactRepeating(
-            AlarmManager.RTC_WAKEUP, first.timeInMillis, AlarmManager.INTERVAL_HOUR, pi
+            AlarmManager.RTC_WAKEUP, first.timeInMillis, AlarmManager.INTERVAL_FIFTEEN_MINUTES, pi
         )
     }
 }
@@ -84,9 +86,14 @@ object StepScheduler {
 class StepAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
+            intent.action == Intent.ACTION_MY_PACKAGE_REPLACED
+        ) {
             StepScheduler.schedule(app)
         }
+        // Make sure continuous background counting is running (it restarts the service if the
+        // system killed it), and take one snapshot as a safety net.
+        StepTrackingService.start(app)
         StepSampler.sampleOnce(app, goAsync())
     }
 }

@@ -27,6 +27,12 @@ class StepLiveUpdater(
     private val handler = Handler(Looper.getMainLooper())
     private var latest = -1f
     private var lastRecordMs = 0L
+    private var trailingScheduled = false
+
+    private val trailing = Runnable {
+        trailingScheduled = false
+        recordLatest()
+    }
 
     private val midnight = object : Runnable {
         override fun run() {
@@ -46,8 +52,11 @@ class StepLiveUpdater(
     fun stop() {
         sensorManager.unregisterListener(this)
         handler.removeCallbacks(midnight)
-        if (latest >= 0f) StepTracker.record(context, latest)
+        handler.removeCallbacks(trailing)
+        trailingScheduled = false
+        if (latest >= 0f) StepTracker.record(context, latest, force = true) else StepTracker.flush(context)
         latest = -1f
+        StepWidgets.updateAll(context)
     }
 
     private fun scheduleMidnight() {
@@ -58,12 +67,21 @@ class StepLiveUpdater(
     override fun onSensorChanged(event: SensorEvent?) {
         val v = event?.values?.getOrNull(0) ?: return
         latest = v
-        val now = System.currentTimeMillis()
-        if (now - lastRecordMs > 2_000L) {
-            lastRecordMs = now
-            StepTracker.record(context, v, now)
-            onChange()
+        val sinceLast = System.currentTimeMillis() - lastRecordMs
+        if (sinceLast > 1_500L) {
+            recordLatest()
+        } else if (!trailingScheduled) {
+            trailingScheduled = true
+            handler.postDelayed(trailing, 1_500L - sinceLast)
         }
+    }
+
+    private fun recordLatest() {
+        if (latest < 0f) return
+        val now = System.currentTimeMillis()
+        lastRecordMs = now
+        StepTracker.record(context, latest, now)
+        onChange()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

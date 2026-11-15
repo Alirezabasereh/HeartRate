@@ -32,6 +32,13 @@ class StepsActivity : AppCompatActivity() {
     private var selected = -1
     private val numberFormat = NumberFormat.getIntegerInstance(Locale.US)
 
+    private var lastShownDay = -1L
+    private val stepsAnim = NumberAnimator { stepsValueText.text = numberFormat.format(it) }
+    private val distanceAnim = NumberAnimator(30L) {
+        distanceText.text = String.format(Locale.US, "%.2f", it / 100f)
+    }
+    private val kcalAnim = NumberAnimator(120L) { kcalText.text = numberFormat.format(it) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_steps)
@@ -60,7 +67,7 @@ class StepsActivity : AppCompatActivity() {
             val popup = PopupMenu(this, anchor)
             popup.menu.add(0, 1, 0, R.string.step_settings)
             popup.setOnMenuItemClickListener {
-                StepSettingsDialog.show(this) { reload() }
+                startActivity(android.content.Intent(this, SettingsActivity::class.java))
                 true
             }
             popup.show()
@@ -98,11 +105,14 @@ class StepsActivity : AppCompatActivity() {
 
         dayStrip.setData(days, goal, selected)
         dateText.text = SimpleDateFormat("EEE, d MMMM", Locale.US).format(day.dayStart)
-        stepsValueText.text = numberFormat.format(day.steps)
+        // Count smoothly while the same day is shown; switching to another day shows it directly.
+        val animate = day.dayStart == lastShownDay
+        lastShownDay = day.dayStart
+        stepsAnim.set(day.steps, animate)
         goalBar.setProgress(day.steps.toFloat() / goal)
         targetText.text = getString(R.string.target_format, numberFormat.format(goal))
-        distanceText.text = String.format(Locale.US, "%.2f", stats.distanceKm)
-        kcalText.text = numberFormat.format(stats.calories)
+        distanceAnim.set(Math.round(stats.distanceKm * 100f), animate)
+        kcalAnim.set(stats.calories, animate)
         hourlyChart.setData(day.hourly)
 
         fillRows(

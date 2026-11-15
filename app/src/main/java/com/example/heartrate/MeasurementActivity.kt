@@ -26,6 +26,9 @@ import kotlin.math.abs
 
 /**
  * Flow:
+ *  0. From the moment the screen opens, finger contact is tracked: placed -> "Hold your finger
+ *     steady", lifted (after having been placed) -> "Place your finger on the sensor and don't
+ *     remove it", never placed -> "Place your finger on the sensor".
  *  1. Wait (no time limit) until the finger is on the sensor and the first valid value arrives.
  *  2. Count 5 seconds from that first value. The ring advances in 20% steps (one per second);
  *     the number inside counts up quickly to each step and the ring follows the same speed.
@@ -59,6 +62,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     private val readings = mutableListOf<Int>()
     private var measuring = false
     private var finished = false
+    private var fingerEverDetected = false
     private var lastValidReadingAt = 0L
 
     /** Silence from the sensor for this long while measuring is treated as "finger lifted". */
@@ -76,7 +80,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     companion object {
         private const val REQUEST_BODY_SENSORS = 100
         private const val MEASUREMENT_DURATION_MS = 5_000L
-        private const val NO_SIGNAL_TIMEOUT_MS = 6_000L
+        private const val NO_SIGNAL_TIMEOUT_MS = 4_000L
         private const val STEP_COUNT = 5            // 5 steps of 20%
         private const val STEP_MS = 1_000L          // one step per second
         private const val RING_COUNT_MS = 450L      // how fast the number/ring counts to the next step
@@ -104,7 +108,9 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         heartRateSensor = findHeartRateSensor()
 
-        waveView.setSignalActive(false)
+        waveView.setSignalLevel(0f)
+        // Start the beat rhythm from the last known heart rate so the first moments look natural.
+        HeartRateStorage.getRecords(this).firstOrNull()?.let { waveView.setBpm(it.bpm) }
         waveView.start()
         startPulseAnimation(800L)
 
@@ -241,6 +247,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     /** Finger lifted: cancel the count, discard what was read, and ask to put the finger back. */
     private fun onFingerLost() {
         if (!measuring || finished) return
+        fingerEverDetected = true
         measuring = false
         countDownTimer?.cancel()
         handler.removeCallbacks(watchdog)
@@ -253,7 +260,7 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
         progressRow.animate().cancel()
         progressRow.visibility = View.INVISIBLE // space stays reserved, nothing shifts
         subtitleText.setText(R.string.hold_steady)
-        waveView.setSignalActive(false)
+        waveView.setSignalLevel(0f)
     }
 
     private fun currentMedian(): Int? {
@@ -294,20 +301,32 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
         if (finished) return
         event ?: return
-        val bpm = event.values.getOrNull(0)?.toInt() ?: return
+        val bpm = event.values.getOrNull(0)?.toInt() ?: 0
 
-        // No contact reported by the sensor.
-        if (event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT || bpm <= 0) {
-            if (measuring) onFingerLost()
-            return
+        when {
+            // The sensor says nothing is touching it.
+            event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT -> {
+                onContactChanged(false, event.accuracy)
+                return
+            }
+            // A valid reading: finger is on the sensor.
+            bpm in MIN_VALID_BPM..MAX_VALID_BPM -> Unit
+            bpm > 0 -> return // out-of-range value, ignore
+            // No value yet, but the sensor reports a usable signal: finger is on it.
+            event.accuracy >= SensorManager.SENSOR_STATUS_ACCURACY_LOW -> {
+                onContactChanged(true, event.accuracy)
+                return
+            }
+            else -> return // no value and unreliable: nothing to conclude
         }
-        if (bpm < MIN_VALID_BPM || bpm > MAX_VALID_BPM) return
 
+        onContactChanged(true, event.accuracy)
         lastValidReadingAt = SystemClock.elapsedRealtime()
         readings.add(bpm)
         if (!measuring) startMeasuring() else updateLiveBpm()
 
-        waveView.setSignalActive(true)
+        // A real value is arriving: the strip is at least at 85% strength.
+        waveView.setSignalLevel(maxOf(signalLevelFor(event.accuracy), 0.85f))
         waveView.setBpm(bpm)
         updatePulseAnimation(bpm)
     }
@@ -315,9 +334,35 @@ class MeasurementActivity : AppCompatActivity(), SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         if (finished) return
         when {
-            accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT -> if (measuring) onFingerLost()
-            // Sensor reports a usable signal: the finger is on it, so change the prompt right away.
-            accuracy >= SensorManager.SENSOR_STATUS_ACCURACY_LOW -> subtitleText.setText(R.string.finger_detected)
+            accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT -> onContactChanged(false, accuracy)
+            accuracy >= SensorManager.SENSOR_STATUS_ACCURACY_LOW -> onContactChanged(true, accuracy)
+        }
+    }
+
+    private fun signalLevelFor(accuracy: Int): Float = when {
+        accuracy >= SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> 1f
+        accuracy == SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> 0.85f
+        accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW -> 0.7f
+        accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE -> 0.5f
+        else -> 0f
+    }
+
+    /** Single place that decides which prompt is shown, from the moment the screen opens. */
+    private fun onContactChanged(present: Boolean, accuracy: Int) {
+        if (finished) return
+        if (present) {
+            fingerEverDetected = true
+            if (!measuring) subtitleText.setText(R.string.finger_detected)
+            // The strip comes alive the moment the sensor reports contact, scaled by signal quality.
+            waveView.setSignalLevel(signalLevelFor(accuracy))
+        } else {
+            waveView.setSignalLevel(0f)
+            if (measuring) {
+                onFingerLost()
+            } else if (fingerEverDetected) {
+                subtitleText.setText(R.string.hold_steady)
+            }
+            // else: the finger was never placed, the initial prompt is still right.
         }
     }
 
