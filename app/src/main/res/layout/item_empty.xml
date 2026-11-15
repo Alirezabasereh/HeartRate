@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:paddingStart="32dp"
+    android:paddingTop="48dp"
+    android:paddingEnd="32dp"
+    android:paddingBottom="24dp"
+    android:text="@string/empty_history"
+    android:textColor="@color/text_secondary"
+    android:textSize="14sp" />
