@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widgetRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="4dp"
+    android:background="@drawable/widget_bg"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="@string/widget_steps"
+        android:textColor="#222222"
+        android:textSize="14sp" />
+
+    <!-- The number takes the free height and shrinks to fit, so nothing is ever clipped -->
+    <TextView
+        android:id="@+id/widgetSteps"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:autoSizeMaxTextSize="32sp"
+        android:autoSizeMinTextSize="14sp"
+        android:autoSizeStepGranularity="1sp"
+        android:autoSizeTextType="uniform"
+        android:gravity="center_vertical|start"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="0"
+        android:textColor="#1E1E1E"
+        android:textSize="30sp" />
+
+    <ProgressBar
+        android:id="@+id/widgetBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="10dp"
+        android:indeterminate="false"
+        android:max="100"
+        android:maxHeight="10dp"
+        android:minHeight="10dp"
+        android:padding="0dp"
+        android:progress="0"
+        android:progressDrawable="@drawable/widget_progress" />
+</LinearLayout>
