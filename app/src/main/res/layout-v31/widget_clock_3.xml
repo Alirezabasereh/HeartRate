@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/clockRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="4dp">
+
+    <AnalogClock
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:dial="@drawable/clock_dial_3"
+        android:hand_hour="@drawable/clock_hour_3"
+        android:hand_minute="@drawable/clock_minute_3"
+        android:hand_second="@drawable/sec_red_00" />
+</FrameLayout>
